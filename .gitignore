@@ -1,0 +1,9 @@
+.DS_Store
+*.log
+.env
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.mongodb.local/
