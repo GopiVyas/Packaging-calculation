@@ -21,10 +21,16 @@ function useGeometry(url) {
       }
     });
     if (!parts.length) return null;
-    const pos = [];
-    for (const g of parts) pos.push(...g.attributes.position.array);
+    // Copy into one typed array. (Spreading a large model into push(...) overflows the call stack.)
+    const total = parts.reduce((n, g) => n + g.attributes.position.array.length, 0);
+    const pos = new Float32Array(total);
+    let at = 0;
+    for (const g of parts) {
+      pos.set(g.attributes.position.array, at);
+      at += g.attributes.position.array.length;
+    }
     const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geom.computeVertexNormals();
     return geom;
   }, [gltf]);

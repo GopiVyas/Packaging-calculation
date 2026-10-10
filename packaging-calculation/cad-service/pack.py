@@ -200,7 +200,7 @@ METHODS = [("column", "Column Stacking"), ("pattern", "Repeating Pattern")]
 STACK_CLEARANCE = 0.3
 
 
-def ray_intervals(m, step):
+def ray_intervals(m, step, deadline=None):
     """Vertical rays on an (x, y) grid through the mesh (already placed at min corner 0).
     Returns (nx, ny, list of z-interval arrays per ray): where along each ray the part is solid."""
     ex = m.extents
@@ -210,7 +210,9 @@ def ray_intervals(m, step):
     per = [[] for _ in range(len(xs) * ny)]
     # Vertical rays need no ray library: for each triangle, the grid points inside its (x, y)
     # projection, and the surface height there (barycentric interpolation).
-    for tri in m.triangles:
+    for t_i, tri in enumerate(m.triangles):
+        if deadline is not None and t_i % 2000 == 0 and time.monotonic() > deadline:
+            raise TimeoutError("exact stacking ran out of time")
         (x0, y0, z0), (x1, y1, z1), (x2, y2, z2) = tri
         det = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2)
         if abs(det) < 1e-12:  # vertical face: seen edge-on by vertical rays
@@ -256,7 +258,7 @@ def _clear(F, d, margin):
     return not np.any((F[:, 0] - margin < d) & (d < F[:, 1] + margin))
 
 
-def exact_stack_pitch(mesh, T, resolution_mm=None):
+def exact_stack_pitch(mesh, T, resolution_mm=None, deadline=None):
     """Smallest vertical pitch (mm) at which identical copies, straight above each other, nest
     without touching — computed on the real surface with vertical rays, not voxels.
     Every copy in the column (not only the next one) is checked. Returns None if no nesting."""
@@ -264,7 +266,7 @@ def exact_stack_pitch(mesh, T, resolution_mm=None):
     m.apply_transform(T)
     ex = m.extents
     step = resolution_mm or max(0.5, float(max(ex[0], ex[1])) / 220)
-    nx, ny, A = ray_intervals(m, step)
+    nx, ny, A = ray_intervals(m, step, deadline)
     F = _forbidden(A, nx, ny, 0, 0)
     if not len(F):
         return None
@@ -303,7 +305,8 @@ def pack(mesh, cartons, upright=False, resolution=64, budget_s=60, max_placement
         if time.monotonic() < deadline:
             t1 = time.monotonic()
             try:
-                d = exact_stack_pitch(mesh, T)
+                # at most a quarter of what is left, so big models never eat the whole budget
+                d = exact_stack_pitch(mesh, T, deadline=t1 + max(1.0, (deadline - t1) / 4))
             except Exception:  # noqa: BLE001 - ray casting failed on a bad mesh; voxels still work
                 d = None
             if d is not None and d < ext[2] - 1.0:  # worth it only when copies really sink in
