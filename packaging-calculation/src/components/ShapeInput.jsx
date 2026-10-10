@@ -1,0 +1,5 @@
+function ShapeInput({ value, onChange }) {
+  const update = (field) => (event) => onChange({ ...value, [field]: event.target.value })
+  return <div className="form-stack"><label>Part name<input value={value.name} onChange={update('name')} placeholder="e.g. Ceramic mug" /></label><div className="dimension-row"><label>Length<input type="number" value={value.length} onChange={update('length')} /></label><label>Width<input type="number" value={value.width} onChange={update('width')} /></label><label>Height<input type="number" value={value.height} onChange={update('height')} /></label><select value={value.unit} onChange={update('unit')} aria-label="Dimension unit"><option>mm</option><option>cm</option><option>in</option></select></div><div className="dimension-row last-row"><label>Quantity<input type="number" value={value.quantity} onChange={update('quantity')} /></label><button className="shape-button selected"><span className="shape-icon" /> Box</button><button className="shape-button"><span className="circle-icon" /> Cylinder</button></div></div>
+}
+export default ShapeInput
