@@ -1,0 +1,110 @@
+// Decision summary card & Confirm winner form styling
+@use './tokens' as *;
+@use './mixins' as *;
+
+.sh-decision-card {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+  border: 1.5px solid rgba(31, 78, 140, 0.25);
+  border-radius: var(--sh-radius-card);
+  padding: 20px 24px;
+  box-shadow: 0 4px 12px rgba(31, 78, 140, 0.05);
+  margin-bottom: 24px;
+
+  .sh-decision-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--sh-line-soft);
+    padding-bottom: 12px;
+
+    .sh-decision-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--sh-primary);
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .sh-decision-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+
+    .sh-decision-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      span.label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--sh-muted);
+        font-weight: 600;
+      }
+
+      b.val {
+        font-size: 16px;
+        color: var(--sh-ink);
+        font-family: var(--sh-sans);
+      }
+
+      small.sub {
+        font-size: 12px;
+        color: var(--sh-muted);
+        font-family: var(--sh-mono);
+      }
+    }
+  }
+}
+
+.sh-lock-confirm-box {
+  background: var(--sh-surface);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius-card);
+  padding: 20px 24px;
+  margin-top: 24px;
+
+  &.locked {
+    background: var(--sh-success-soft);
+    border-color: var(--sh-success-line);
+  }
+
+  .sh-lock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 20px;
+    background: var(--sh-primary);
+    color: #FFFFFF;
+    border: 1px solid var(--sh-primary);
+    border-radius: var(--sh-radius-btn);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all var(--sh-duration) var(--sh-ease);
+
+    &:hover:not(:disabled) {
+      background: var(--sh-primary-hover);
+      box-shadow: var(--sh-shadow-md);
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}

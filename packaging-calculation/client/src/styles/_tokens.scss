@@ -1,0 +1,82 @@
+// Design Tokens for PackSmart — Intelligent Packaging Solution
+// Keeping 100% token consistency with current app specs and master palette
+
+:root {
+  // Brand Palette
+  --sh-primary: #1F4E8C;
+  --sh-primary-hover: #163A69;
+  --sh-primary-soft: #E6EEF7;
+  --sh-primary-glow: rgba(31, 78, 140, 0.22);
+
+  --sh-accent: #C2410C;
+  --sh-accent-hover: #A8380A;
+  --sh-accent-soft: #FFF6F0;
+  --sh-accent-glow: rgba(194, 65, 12, 0.22);
+  --sh-accent-ink: #9A3412;
+
+  --sh-gold: #B98A1C;
+  --sh-gold-hover: #9C7414;
+  --sh-gold-soft: #FEF9C3;
+
+  --sh-success: #1E6B43;
+  --sh-success-soft: #E3F1E9;
+  --sh-success-line: #B7DCC6;
+
+  --sh-warn-soft: #FFF6E0;
+  --sh-warn-line: #F2D58A;
+
+  // Neutrals
+  --sh-ground: #F3F2EE;
+  --sh-surface: #FFFFFF;
+  --sh-surface-subtle: #F9F8F5;
+  --sh-stage-bg: #F6F5F2;
+
+  --sh-ink: #16191D;
+  --sh-ink-2: #3D434B;
+  --sh-muted: #5A6069;
+  --sh-dark-2: #2A2F36;
+  --sh-dark-muted: #A9AEB6;
+
+  // Borders
+  --sh-line: #DCDAD3;
+  --sh-line-soft: #ECEAE4;
+  --sh-input-border: #C9C6BD;
+
+  // Logistics Material Colors
+  --sh-kraft: #E9DCC6;
+  --sh-kraft-line: #6B4F2A;
+  --sh-wood: #B98F57;
+
+  // Typography
+  --sh-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --sh-mono: 'IBM Plex Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  // Radii
+  --sh-radius-card: 12px;
+  --sh-radius-btn: 8px;
+  --sh-radius-input: 8px;
+  --sh-radius-badge: 6px;
+  --sh-radius-pill: 999px;
+
+  // Elevation & Shadows
+  --sh-shadow-sm: 0 1px 2px rgba(22, 25, 29, 0.05);
+  --sh-shadow-md: 0 4px 10px rgba(22, 25, 29, 0.06), 0 1px 3px rgba(22, 25, 29, 0.04);
+  --sh-shadow-lg: 0 12px 24px -4px rgba(22, 25, 29, 0.08), 0 4px 8px -2px rgba(22, 25, 29, 0.03);
+  --sh-shadow-hover: 0 6px 16px rgba(31, 78, 140, 0.09);
+
+  // Transitions
+  --sh-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sh-duration: 200ms;
+}
+
+$primary: var(--sh-primary);
+$accent: var(--sh-accent);
+$gold: var(--sh-gold);
+$success: var(--sh-success);
+$ground: var(--sh-ground);
+$surface: var(--sh-surface);
+$ink: var(--sh-ink);
+$muted: var(--sh-muted);
+$line: var(--sh-line);
+$sans: var(--sh-sans);
+$mono: var(--sh-mono);

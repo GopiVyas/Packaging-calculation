@@ -1,0 +1,95 @@
+// Mixins for PackSmart — Intelligent Packaging Solution
+@use './tokens' as *;
+
+@mixin glass-panel($bg: rgba(255, 255, 255, 0.88), $blur: 12px) {
+  background: $bg;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 1px solid rgba(220, 218, 211, 0.8);
+}
+
+@mixin subtle-card-lift {
+  transition: transform var(--sh-duration) var(--sh-ease), box-shadow var(--sh-duration) var(--sh-ease);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sh-shadow-hover);
+  }
+}
+
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin responsive-wide {
+  @media (min-width: 1440px) {
+    @content;
+  }
+}
+
+@mixin responsive-desktop {
+  @media (min-width: 1025px) {
+    @content;
+  }
+}
+
+@mixin responsive-tablet {
+  @media (max-width: 1024px) {
+    @content;
+  }
+}
+
+@mixin responsive-mobile {
+  @media (max-width: 640px) {
+    @content;
+  }
+}
+
+@mixin shimmer-fx {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: sh-shimmer 1.8s infinite;
+}
+
+@keyframes sh-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes sh-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(31, 78, 140, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(31, 78, 140, 0);
+  }
+}
+
+@keyframes sh-flow-box {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}

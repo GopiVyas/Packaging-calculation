@@ -1,0 +1,147 @@
+// Data Tables with sticky headers, hover highlights and left accent bar
+@use './tokens' as *;
+@use './mixins' as *;
+
+.sh-table-card {
+  background: var(--sh-surface);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius-card);
+  overflow: hidden;
+  box-shadow: var(--sh-shadow-sm);
+  width: 100%;
+
+  .sh-table-wrap {
+    overflow-x: auto;
+    max-height: 520px;
+  }
+
+  .sh-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    text-align: left;
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #F8F7F4;
+
+      th {
+        padding: 10px 14px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--sh-muted);
+        border-bottom: 1px solid var(--sh-line);
+        white-space: nowrap;
+
+        &.r {
+          text-align: right;
+        }
+      }
+    }
+
+    tbody {
+      tr {
+        transition: background-color var(--sh-duration) var(--sh-ease);
+        cursor: default;
+
+        td {
+          padding: 12px 14px;
+          border-bottom: 1px solid var(--sh-line-soft);
+          color: var(--sh-ink);
+          vertical-align: middle;
+
+          &.r {
+            text-align: right;
+          }
+
+          &.mono {
+            font-family: var(--sh-mono);
+          }
+        }
+
+        &:last-child td {
+          border-bottom: none;
+        }
+
+        &.clickable {
+          cursor: pointer;
+        }
+
+        &:hover td {
+          background-color: #F8FAFC;
+        }
+
+        // Active / Highlighted row
+        &.active td {
+          background-color: var(--sh-primary-soft);
+        }
+
+        // Winner / Best row emphasis with left accent bar
+        &.best-row {
+          td:first-child {
+            border-left: 4px solid var(--sh-primary);
+          }
+        }
+
+        &.recommended-row {
+          td:first-child {
+            border-left: 4px solid var(--sh-success);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Unified Pill Badges
+.sh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--sh-radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+
+  &.sh-badge-green {
+    background: var(--sh-success-soft);
+    color: var(--sh-success);
+    border: 1px solid var(--sh-success-line);
+  }
+
+  &.sh-badge-blue {
+    background: var(--sh-primary-soft);
+    color: var(--sh-primary);
+    border: 1px solid rgba(31, 78, 140, 0.2);
+  }
+
+  &.sh-badge-gold {
+    background: var(--sh-gold-soft);
+    color: var(--sh-gold-hover);
+    border: 1px solid var(--sh-warn-line);
+  }
+
+  &.sh-badge-orange {
+    background: var(--sh-accent-soft);
+    color: var(--sh-accent-ink);
+    border: 1px solid rgba(194, 65, 12, 0.2);
+  }
+
+  &.sh-badge-grey {
+    background: var(--sh-line-soft);
+    color: var(--sh-ink-2);
+    border: 1px solid var(--sh-line);
+  }
+
+  &.sh-badge-solid {
+    background: var(--sh-accent);
+    color: #FFFFFF;
+  }
+}

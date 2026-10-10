@@ -1,0 +1,138 @@
+// Run History Vertical Timeline & Calculation Button Progress
+@use './tokens' as *;
+@use './mixins' as *;
+
+.sh-timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  gap: 10px;
+  padding-left: 14px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: var(--sh-line);
+  }
+
+  .sh-timeline-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    background: var(--sh-surface);
+    border: 1px solid var(--sh-line);
+    border-radius: var(--sh-radius-btn);
+    cursor: pointer;
+    text-align: left;
+    transition: all var(--sh-duration) var(--sh-ease);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -14px;
+      top: 16px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--sh-line);
+      border: 2px solid var(--sh-surface);
+      transform: translateX(-50%);
+      transition: all var(--sh-duration) var(--sh-ease);
+    }
+
+    &:hover {
+      border-color: var(--sh-primary);
+      background: var(--sh-surface-subtle);
+
+      &::before {
+        background: var(--sh-primary);
+      }
+    }
+
+    &.active {
+      border-color: var(--sh-primary);
+      background: var(--sh-primary-soft);
+      box-shadow: 0 2px 6px rgba(31, 78, 140, 0.08);
+
+      &::before {
+        background: var(--sh-primary);
+        box-shadow: 0 0 0 3px rgba(31, 78, 140, 0.2);
+      }
+    }
+
+    .sh-timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+
+      .sh-run-num {
+        font-family: var(--sh-mono);
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--sh-ink);
+      }
+    }
+
+    .sh-timeline-meta {
+      font-size: 12px;
+      color: var(--sh-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+  }
+}
+
+// Shimmering Re-run calculation button
+.sh-btn-calculate {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--sh-radius-btn);
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--sh-accent);
+  color: #FFFFFF;
+  border: 1px solid var(--sh-accent);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--sh-duration) var(--sh-ease);
+
+  &:hover:not(:disabled) {
+    background: var(--sh-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--sh-shadow-md);
+  }
+
+  &.sh-busy {
+    background: var(--sh-accent-hover);
+    cursor: wait;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      @include shimmer-fx;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

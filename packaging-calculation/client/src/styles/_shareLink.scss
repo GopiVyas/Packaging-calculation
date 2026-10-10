@@ -1,0 +1,99 @@
+// Share link component with copy animation and status badge
+@use './tokens' as *;
+@use './mixins' as *;
+
+.sh-share-card {
+  background: var(--sh-surface);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius-card);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .sh-share-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .sh-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--sh-radius-pill);
+      font-size: 13px;
+      font-weight: 600;
+
+      &.shared {
+        background: var(--sh-success-soft);
+        color: var(--sh-success);
+        border: 1px solid var(--sh-success-line);
+      }
+
+      &.not-shared {
+        background: var(--sh-line-soft);
+        color: var(--sh-muted);
+        border: 1px solid var(--sh-line);
+      }
+    }
+  }
+
+  .sh-copy-box {
+    display: flex;
+    align-items: center;
+    background: var(--sh-surface-subtle);
+    border: 1px solid var(--sh-input-border);
+    border-radius: var(--sh-radius-btn);
+    overflow: hidden;
+    transition: border-color var(--sh-duration) var(--sh-ease);
+
+    &:focus-within {
+      border-color: var(--sh-primary);
+      box-shadow: 0 0 0 3px rgba(31, 78, 140, 0.15);
+    }
+
+    .sh-copy-text {
+      flex: 1;
+      padding: 10px 14px;
+      font-family: var(--sh-mono);
+      font-size: 13px;
+      color: var(--sh-ink);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .sh-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 16px;
+      min-height: 42px;
+      background: var(--sh-surface);
+      border: none;
+      border-left: 1px solid var(--sh-line);
+      color: var(--sh-ink-2);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all var(--sh-duration) var(--sh-ease);
+
+      svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      &:hover {
+        background: var(--sh-surface-subtle);
+        color: var(--sh-primary);
+      }
+
+      &.copied {
+        background: var(--sh-success-soft);
+        color: var(--sh-success);
+      }
+    }
+  }
+}

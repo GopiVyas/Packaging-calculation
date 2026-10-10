@@ -41,8 +41,19 @@ export default function Login() {
         </div>
         <ErrorNotice error={error} />
         <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ minHeight: 40 }}
+          onClick={() => {
+            setForm({ email: 'demo@packaging.local', password: 'demo1234' });
+          }}
+        >
+          Fill Demo Account (demo@packaging.local)
+        </button>
         <p className="muted" style={{ margin: 0 }}>New here? <Link to="/signup">Start a free 14-day trial</Link></p>
       </form>
     </div>
   );
 }
+

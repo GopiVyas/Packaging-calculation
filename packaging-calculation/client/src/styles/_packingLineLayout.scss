@@ -1,0 +1,179 @@
+// Master layout for The Packing Line workflow
+@use './tokens' as *;
+@use './mixins' as *;
+
+.sh-packing-line-layout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .sh-line-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0; // Connectors handle spacing between station cards
+  }
+}
+
+// Breadcrumb & Part Header enhancements
+.sh-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .sh-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--sh-muted);
+
+    a {
+      color: var(--sh-muted);
+      text-decoration: none;
+      transition: color var(--sh-duration) var(--sh-ease);
+
+      &:hover {
+        color: var(--sh-primary);
+      }
+    }
+
+    span.current {
+      color: var(--sh-ink);
+      font-weight: 600;
+    }
+  }
+
+  .sh-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    .sh-title-box {
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--sh-ink);
+        letter-spacing: -0.02em;
+      }
+
+      .sh-sub-meta {
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: var(--sh-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+
+    .sh-pager-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--sh-surface);
+      border: 1px solid var(--sh-line);
+      border-radius: var(--sh-radius-btn);
+      padding: 4px 10px;
+
+      .sh-pager-btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: var(--sh-ink);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background var(--sh-duration) var(--sh-ease);
+
+        &:hover:not(:disabled) {
+          background: var(--sh-surface-subtle);
+        }
+
+        &:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
+      }
+
+      .sh-pager-text {
+        font-size: 13px;
+        color: var(--sh-muted);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// SpecList styling
+.sh-spec-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(130px, auto) 1fr;
+  gap: 10px 20px;
+  font-size: 13px;
+
+  dt {
+    color: var(--sh-muted);
+    font-weight: 500;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--sh-ink);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+
+    b {
+      font-weight: 700;
+    }
+  }
+}
+
+// Toast notification for re-run / copy
+.sh-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--sh-dark-2);
+  color: #FFFFFF;
+  border-radius: var(--sh-radius-btn);
+  box-shadow: var(--sh-shadow-lg);
+  font-size: 13px;
+  font-weight: 500;
+  animation: sh-slide-up 0.25s var(--sh-ease);
+
+  svg {
+    color: var(--sh-success);
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@keyframes sh-slide-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

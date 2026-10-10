@@ -1,0 +1,217 @@
+// Station Card styling with animated connector line and packaging box icon
+@use './tokens' as *;
+@use './mixins' as *;
+
+.sh-station-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  // Animated connector line between station cards
+  &:not(:last-child)::after {
+    content: '';
+    display: block;
+    width: 2px;
+    height: 24px;
+    margin: 0 auto;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--sh-primary) 0,
+      var(--sh-primary) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    opacity: 0.45;
+  }
+
+  .sh-station-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    position: relative;
+
+    .sh-connector-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--sh-line);
+    }
+
+    .sh-connector-icon {
+      position: relative;
+      z-index: 2;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--sh-surface);
+      border: 1.5px solid var(--sh-primary);
+      color: var(--sh-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--sh-shadow-sm);
+      animation: sh-pulse-glow 3s infinite;
+
+      svg {
+        width: 11px;
+        height: 11px;
+      }
+    }
+  }
+}
+
+.sh-station-card {
+  background: var(--sh-surface);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius-card);
+  box-shadow: var(--sh-shadow-sm);
+  scroll-margin-top: 130px;
+  overflow: hidden;
+  transition: border-color var(--sh-duration) var(--sh-ease), box-shadow var(--sh-duration) var(--sh-ease);
+
+  &:hover {
+    border-color: rgba(31, 78, 140, 0.35);
+    box-shadow: var(--sh-shadow-md);
+  }
+
+  .sh-station-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px;
+    background: var(--sh-surface);
+    border-bottom: 1px solid var(--sh-line-soft);
+
+    .sh-station-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sh-station-no {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--sh-primary-soft);
+      color: var(--sh-primary);
+      border: 1px solid rgba(31, 78, 140, 0.2);
+      font-family: var(--sh-mono);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .sh-station-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      h2 {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        color: var(--sh-ink);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .sh-station-desc {
+        font-size: 13px;
+        color: var(--sh-muted);
+        margin: 0;
+      }
+    }
+
+    .sh-station-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sh-help-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid var(--sh-primary);
+      background: var(--sh-surface);
+      color: var(--sh-primary);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--sh-duration) var(--sh-ease);
+
+      &:hover {
+        background: var(--sh-primary);
+        color: #fff;
+      }
+
+      &[aria-expanded="true"] {
+        background: var(--sh-primary);
+        color: #fff;
+      }
+    }
+  }
+
+  .sh-station-help-drawer {
+    background: var(--sh-primary-soft);
+    border-bottom: 1px solid rgba(31, 78, 140, 0.15);
+    padding: 12px 24px;
+    color: var(--sh-ink-2);
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    svg {
+      flex-shrink: 0;
+      color: var(--sh-primary);
+      margin-top: 2px;
+    }
+  }
+
+  .sh-station-body {
+    display: flex;
+    flex-wrap: wrap;
+
+    .sh-station-col-left {
+      flex: 1 1 520px;
+      min-width: 0;
+      padding: 24px;
+      border-right: 1px solid var(--sh-line-soft);
+      background: var(--sh-surface-subtle);
+    }
+
+    .sh-station-col-right {
+      flex: 1 1 420px;
+      min-width: 0;
+      padding: 24px;
+      background: var(--sh-surface);
+    }
+
+    .sh-station-col-full {
+      flex: 1 1 100%;
+      padding: 24px;
+      background: var(--sh-surface);
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .sh-station-card .sh-station-body .sh-station-col-left {
+    border-right: 0;
+    border-bottom: 1px solid var(--sh-line-soft);
+  }
+}
