@@ -39,7 +39,7 @@ export function RunProgress({ run, compact }) {
 }
 
 const d3 = (o) => `${num(o.l)}×${num(o.w)}×${num(o.h)}`;
-const LIMIT = { weight: 'Weight', volume: 'Volume', height: 'Height', space: 'Space' };
+const LIMIT = { weight: 'Weight', volume: 'Volume', height: 'Height', space: 'Space', stacking: 'Stacking setting' };
 
 /* ---------- 1 · Calculation settings ---------- */
 export function SettingsSection({ part, runs, run, onPick, onRan, canEdit }) {
@@ -220,7 +220,7 @@ export function CartonSection({ run, sel, setSel, part }) {
         </div>
         <p className="muted" style={{ fontSize: 13 }}>Ranked by cost per piece, so the top row is the cheapest way to ship this part. Click a row — the 3D on the left follows. Fill is how much of the carton's inner volume is part material.</p>
         <h3 className="sub" style={{ marginTop: 20 }}>Packing algorithm · {d3(c.outer)} mm outer</h3>
-        {arr?.clusterIndex != null && <p className="muted" style={{ fontSize: 13, margin: '0 0 8px' }}>{ALGO_NAMES[shown]} uses cluster {arr.clusterIndex + 1} ({arr.piecesPerCluster} pieces) — see section 3.</p>}
+        {arr?.clusterIndex != null && <p className="muted" style={{ fontSize: 13, margin: '0 0 8px' }}>{ALGO_NAMES[shown]} uses cluster {arr.clusterIndex + 1} ({arr.piecesPerCluster} pieces) — see section 3.{arr.mixed && arr.singles > 0 ? ` The space left over is filled with ${arr.singles} single part${arr.singles === 1 ? '' : 's'}.` : ''}</p>}
         <table className="table pick">
           <thead><tr><th>Packing algorithm</th><th className="r">Count</th><th className="r">Compute</th></tr></thead>
           <tbody>
@@ -355,14 +355,18 @@ export function PalletSection({ run, sel }) {
         ]} />
         <h3 className="sub" style={{ marginTop: 20 }}>This load</h3>
         <Facts rows={[
-          ['Carton (outer)', `${d3(c.outer)} mm${c.trimmed ? ` · height optimised from ${num(c.baselineOuter.h)} mm` : ''}`],
+          ['Carton (outer)', `${d3(c.outer)} mm${c.trimmed ? ` · height cut from ${num(c.baselineOuter.h)} mm to fit the packed parts` : ''}`],
+          ...(c.cartonLimitedBy === 'weight' ? [['Carton filled by', `Weight: ${c.perCarton} parts reach the carton's max. weight (${num(c.grossKg, 1)} kg packed). Check the part weight in section 2.`]] : []),
           ['Cartons per layer', `${c.pallet.perLayer}${c.pallet.layer.mixed ? ' · mixed directions' : ''}`],
           ['Pallet layers', c.pallet.layers],
           ['Cartons per pallet', c.pallet.perPallet],
           ['Pieces per pallet', <b key="p">{num(c.piecesPerPallet)}</b>],
-          ['Gross weight', `${num(c.pallet.palletKg, 2)} kg of ${num(P.maxLoadKg)} kg`],
+          ['Load', `${num(c.pallet.loadKg ?? c.pallet.palletKg - (P.weightKg || 0), 1)} kg of ${num(P.maxLoadKg)} kg max. load`],
+          ['Gross weight', `${num(c.pallet.palletKg, 1)} kg (load + ${num(P.weightKg || 0)} kg pallet)`],
           ['Pieces per carton', c.perCarton],
-          ['Limited by', LIMIT[c.pallet.limitedBy] || c.pallet.limitedBy]
+          ['Limited by', c.pallet.limitedBy === 'weight'
+            ? `Weight: ${c.pallet.perPallet} × ${num(c.grossKg, 1)} kg cartons reach the ${num(P.maxLoadKg)} kg limit (space for ${c.pallet.perLayer * c.pallet.layers})`
+            : LIMIT[c.pallet.limitedBy] || c.pallet.limitedBy]
         ]} />
       </>} />
   );
@@ -385,7 +389,7 @@ export function ContainerSection({ run, sel, ctSel, setCtSel }) {
             </select></label>
         </div>
         <Viewer3D key={`${c.id}-${ct.id}`} boxes={scene.boxes} dims={scene.dims} fileName={`${r.part.name}-${ct.name}`} height={380}
-          caption={`${ct.pallets} loaded pallets drawn · ${LIMIT[ct.limitedBy]}-bound`}
+          caption={`${ct.pallets} loaded pallets drawn · limited by ${(LIMIT[ct.limitedBy] || '').toLowerCase()}`}
           layers={[{ id: 'pallets', label: 'Pallets', on: true }, { id: 'stack', label: 'Loaded stack outline', on: false }, { id: 'space', label: 'Load space', on: true }, { id: 'shell', label: 'Container', on: true }]} />
       </>}
       right={<>
@@ -396,7 +400,9 @@ export function ContainerSection({ run, sel, ctSel, setCtSel }) {
           ['Loaded stack', `${num(scene.stackL)} × ${num(scene.stackW)} × ${num(c.pallet.heightMm * ct.tiers)} mm`],
           ['Pallets per floor layer', `${ct.perFloorLayer}${ct.floor.mixed ? ' · lengthwise and crosswise' : ''}`],
           ['Pallets stacked', `${ct.tiers} · loaded pallet ${num(c.pallet.heightMm)} mm`],
-          ['Pallets loaded', <span key="pl"><b>{ct.pallets}</b> {LIMIT[ct.limitedBy]}-bound</span>],
+          ['Pallets loaded', <span key="pl"><b>{ct.pallets}</b> {ct.limitedBy === 'stacking'
+            ? `· limited by the stacking setting (${ct.tiers} high); the height has room for ${ct.tiersRoomFor}. Change "Pallets stacked" in section 1 to load more.`
+            : `${LIMIT[ct.limitedBy]}-bound`}</span>],
           ['Weight', `${num(ct.kg)} kg of ${num(ct.payloadKg)} kg`]
         ]} />
         <h3 className="sub" style={{ marginTop: 20 }}>Containers in this run</h3>

@@ -68,7 +68,7 @@ export function runPart({ part, cartons, pallet, containers, settings = {}, real
       algorithms.push({ id: m.id, name: m.name, quotable: true, count, rawCount: m.count, computeMs: m.computeMs, nested: !!m.nested, usedH });
       arrangements[m.id] = m.copies
         // clusters: one exact 3×4 matrix per piece (part → carton)
-        ? { copies: m.copies.slice(0, count), layers: layersNeeded, perLayer: m.perLayer, pitch: m.pitch, nested: !!m.nested, clusterIndex: m.clusterIndex, piecesPerCluster: m.piecesPerCluster }
+        ? { copies: m.copies.slice(0, count), layers: layersNeeded, perLayer: m.perLayer, pitch: m.pitch, nested: !!m.nested, clusterIndex: m.clusterIndex, piecesPerCluster: m.piecesPerCluster, mixed: !!m.mixed, singles: m.singles || 0 }
         : { matrix: m.matrix, placements: m.placements.slice(0, count), layers: layersNeeded, perLayer: m.perLayer, pitch: m.pitch, shift: m.shift, rowShift: m.rowShift, nested: !!m.nested };
     }
     const bestAlgo = algorithms.reduce((a, b) => (b.count > a.count ? b : a));
@@ -86,6 +86,7 @@ export function runPart({ part, cartons, pallet, containers, settings = {}, real
     const pal = fitCartonsOnPallet(outer, grossKg, pallet);
     if (pal.perPallet < 1) continue;
     const piecesPerPallet = pal.perPallet * perCarton;
+    const loadKg = pal.perPallet * grossKg; // cartons only; the pallet's own weight comes on top
 
     const perContainer = containers.map((ct) => {
       const con = fitPalletsInContainer(pallet.L, pallet.W, pal.heightMm, pal.palletKg, ct, { maxTiers: s.maxTiers, clearanceMm: s.clearanceMm });
@@ -104,7 +105,9 @@ export function runPart({ part, cartons, pallet, containers, settings = {}, real
         pieces,
         kg: round(con.perContainer * pal.palletKg, 1),
         payloadKg: ct.payloadKg,
-        limitedBy: con.perContainer === 0 ? 'height' : con.perContainer < con.slots ? 'weight' : 'volume',
+        limitedBy: con.perContainer === 0 ? 'height' : con.perContainer < con.slots ? 'weight'
+          : con.tiers < Math.floor((con.loadH + 1e-6) / pal.heightMm) ? 'stacking' : 'volume',
+        tiersRoomFor: pal.heightMm > 0 ? Math.floor((con.loadH + 1e-6) / pal.heightMm) : 0,
         freightCost: ct.freightCost || 0,
         costPerPiece: pieces ? round((carton.price || 0) / perCarton + freightPerPiece, 4) : null,
         containersNeeded: pieces ? Math.ceil(s.qty / pieces) : null
@@ -136,7 +139,7 @@ export function runPart({ part, cartons, pallet, containers, settings = {}, real
       binding: byWeight < bestAlgo.rawCount ? 'Weight' : 'Geometry',
       pallet: {
         perLayer: pal.perLayer, layers: Math.ceil(pal.perPallet / pal.perLayer), maxLayers: pal.layers, perPallet: pal.perPallet,
-        layer: pal.layer, palletKg: round(pal.palletKg, 2), heightMm: pal.heightMm, stackH: pal.heightMm - pallet.deckH,
+        layer: pal.layer, palletKg: round(pal.palletKg, 2), loadKg: round(loadKg, 2), heightMm: pal.heightMm, stackH: pal.heightMm - pallet.deckH,
         limitedBy: pal.limitedBy, fill: round(pal.fill * 100, 1)
       },
       piecesPerPallet,

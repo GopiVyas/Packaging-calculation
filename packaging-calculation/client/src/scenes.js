@@ -43,12 +43,16 @@ export function palletScene(c, pallet) {
   const rects = floorRects(p.layer);
   const ch = c.outer.h;
   const boxes = [{ pos: [0, 0, 0], size: [pallet.L, pallet.deckH, pallet.W], color: DECK, layer: 'deck' }];
-  let n = 0;
-  for (let layer = 0; n < p.perPallet && layer < p.layers; layer++) {
-    for (const q of rects) {
-      if (n >= p.perPallet) break;
+  // Full layers from the bottom; a part layer on top (weight limit) sits as one tidy block in the
+  // middle of the pallet, the way it is loaded for stability, not scattered or in a corner.
+  const used = rects.length ? Math.ceil(p.perPallet / rects.length) : 0;
+  const cx = pallet.L / 2, cz = pallet.W / 2;
+  const central = [...rects].sort((a, b) => Math.hypot(a.x + a.l / 2 - cx, a.y + a.w / 2 - cz) - Math.hypot(b.x + b.l / 2 - cx, b.y + b.w / 2 - cz));
+  for (let layer = 0; layer < used; layer++) {
+    const inLayer = Math.min(rects.length, p.perPallet - layer * rects.length);
+    const pick = inLayer >= rects.length ? rects : central.slice(0, inLayer);
+    for (const q of pick) {
       boxes.push({ pos: [q.x, pallet.deckH + layer * ch, q.y], size: [q.l, ch, q.w], color: (layer + (q.l !== rects[0].l ? 1 : 0)) % 2 ? LOAD : '#3573C2', edgeColor: '#1C3F70', layer: 'loaded' });
-      n++;
     }
   }
   const usedL = Math.max(0, ...rects.map((q) => q.x + q.l));

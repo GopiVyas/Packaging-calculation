@@ -40,9 +40,13 @@ export default function ViewerStage({
 
   const span = Math.max(...bounds) * S || 1;
   const center = [(bounds[0] * S) / 2, (bounds[1] * S) / 2, (bounds[2] * S) / 2];
-  const cam = [center[0] + span * 1.25, center[1] + span * 0.9, center[2] + span * 1.45];
+  // long, thin scenes (a container) get a closer camera so the load fills the view
+  const [b1, b2] = [...bounds].sort((u, v) => v - u);
+  const k = b2 > 0 && b1 / b2 > 2.5 ? 0.72 : 1;
+  const cam = [center[0] + span * 1.25 * k, center[1] + span * 0.9 * k, center[2] + span * 1.45 * k];
 
-  const visibleBoxes = boxes.filter((b) => !b.layer || layerStates[b.layer]);
+  // keep each box's own index as its key, so hiding a layer never hands one box another's geometry
+  const visibleBoxes = boxes.map((b, i) => [b, i]).filter(([b]) => !b.layer || layerStates[b.layer]);
 
   const toggleLayer = (layerId) => {
     setLayerStates((prev) => ({ ...prev, [layerId]: !prev[layerId] }));
@@ -122,7 +126,7 @@ export default function ViewerStage({
           <directionalLight position={[-span, span, -span]} intensity={0.35} />
 
           <group ref={sceneRef}>
-            {visibleBoxes.map((b, i) => (
+            {visibleBoxes.map(([b, i]) => (
               <Block key={i} b={b} />
             ))}
             <Suspense fallback={null}>
@@ -197,11 +201,8 @@ function Block({ b }) {
         <mesh>
           <cylinderGeometry args={[r, r, h, 36]} />
           <meshStandardMaterial color={b.color || '#8C98A8'} roughness={0.4} metalness={0.15} />
+          <Edges color="#5A6675" threshold={30} />
         </mesh>
-        <lineSegments>
-          <edgesGeometry args={[new cylinderEdgesGeometry(r, h)]} />
-          <lineBasicMaterial color="#5A6675" />
-        </lineSegments>
       </group>
     );
   }
@@ -215,31 +216,25 @@ function Block({ b }) {
         opacity={b.opacity ?? 1}
         roughness={0.5}
       />
-      {b.edge && <Edges color="#475569" />}
+      {b.edge !== false && <Edges color={b.edgeColor || '#00000033'} />}
     </mesh>
   );
 }
 
-function cylinderEdgesGeometry(r, h) {
-  const geom = new THREE.BufferGeometry();
-  return geom;
-}
-
-import * as THREE from 'three';
-
 function DimLabels({ dims }) {
-  const [L, W, H] = [dims.l * S, dims.w * S, dims.h * S];
+  // Fixed-size screen labels at the model's edges. No distanceFactor: with it, labels scale with
+  // camera distance and swamp small parts (a 66 mm clamp puts the camera a few cm away).
+  const { l, w, h } = dims;
+  const tag = (pos, text) => (
+    <Html position={pos} center style={{ pointerEvents: 'none' }} zIndexRange={[10, 0]}>
+      <span className="dim-tag">{text}</span>
+    </Html>
+  );
   return (
     <>
-      <Html position={[L / 2, -0.015, -0.04]} center distanceFactor={12}>
-        <span className="dim-tag">L {dims.l} mm</span>
-      </Html>
-      <Html position={[-0.04, -0.015, W / 2]} center distanceFactor={12}>
-        <span className="dim-tag">W {dims.w} mm</span>
-      </Html>
-      <Html position={[-0.04, H / 2, -0.04]} center distanceFactor={12}>
-        <span className="dim-tag">H {dims.h} mm</span>
-      </Html>
+      {tag([(l * S) / 2, 0, w * S], `L ${Math.round(l)} mm`)}
+      {tag([l * S, 0, (w * S) / 2], `W ${Math.round(w)} mm`)}
+      {tag([l * S, (h * S) / 2, w * S], `H ${Math.round(h)} mm`)}
     </>
   );
 }

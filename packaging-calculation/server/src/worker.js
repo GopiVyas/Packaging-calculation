@@ -27,11 +27,15 @@ async function loadInputs(run) {
   ]);
   if (!part) throw new Error('The part was deleted');
   if (!cartons.length || !pallet || !containers.length) throw new Error('A carton, pallet or container of this run was deleted');
+  // Plain JSON: database ids become strings. ObjectIds do not survive the hand-over to the
+  // calculation thread (structured clone turns them into "[object Object]"), which broke the
+  // match between cartons and their real-shape results, and the container ids.
+  const plain = (doc) => JSON.parse(JSON.stringify(doc.toObject({ flattenMaps: true })));
   return {
-    part: part.toObject({ flattenMaps: true }),
-    cartons: cartons.map((c) => c.toObject()),
-    pallet: pallet.toObject(),
-    containers: containers.map((c) => c.toObject()),
+    part: plain(part),
+    cartons: cartons.map(plain),
+    pallet: plain(pallet),
+    containers: containers.map(plain),
     settings: req.settings,
     used: { cartons: cartons.map((c) => c.name), pallet: pallet.name, containers: containers.map((c) => c.name) }
   };

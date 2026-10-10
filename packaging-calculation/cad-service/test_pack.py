@@ -100,3 +100,13 @@ def test_tray_nests_on_real_surface():
     G, T, ext = _p.voxel_model(mesh, _p.rotations(False)[0], 3.125)
     d = _p.exact_stack_pitch(mesh, T)
     assert d is not None and 9.0 <= d <= 11.0
+
+
+def test_clusters_fill_leftover_space_with_single_parts():
+    """Clamp pairs are 112 mm long; a 154 mm carton leaves 42 mm that single clamps must fill."""
+    from app import read_step, shape_to_mesh
+    mesh = shape_to_mesh(read_step(str(Path(__file__).parent / "samples" / "clamp.step")))
+    r = pack(mesh, [{"id": "S1", "innerL": 154, "innerW": 149, "innerH": 190}], budget_s=40, clusters=True)
+    cl = next(m for m in r["cartons"][0]["methods"] if m["id"] == "cluster")
+    assert cl["count"] >= 26 and cl.get("singles", 0) >= 1
+    assert len(cl["copies"]) == cl["count"]

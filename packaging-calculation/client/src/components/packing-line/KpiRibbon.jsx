@@ -34,7 +34,7 @@ export default function KpiRibbon({
             <span>{partName}</span>
           </span>
           <span className="sh-kpi-run-label">
-            Run {run.number} · {currentCarton.name}
+            Run {run.number} · {currentCarton.name}{currentCarton.outer ? ` → ${Math.round(currentCarton.outer.l)}×${Math.round(currentCarton.outer.w)}×${Math.round(currentCarton.outer.h)} mm outer${currentCarton.trimmed ? ' (height cut to fit)' : ''}` : ''}
           </span>
         </div>
 

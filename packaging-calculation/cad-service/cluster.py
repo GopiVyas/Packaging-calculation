@@ -10,6 +10,7 @@ grid (flipping two axes) is an exact rotation of the cells, and every piece keep
 matrix (part → carton, mm) so the real geometry can be drawn and checked.
 """
 import itertools
+import math
 import time
 
 import numpy as np
@@ -241,6 +242,26 @@ def cluster_pack(mesh, voxel_models, cartons, upright, budget_s, max_copies=1500
                 continue
             copies = copies_of(best_cl, best, inner, max_copies)
             (px, _, _), (ox, py, _), (sx, sy, pz) = best["vec"]
+            if mid == "cluster" and time.monotonic() < deadline + 2:
+                # clusters + single parts in the leftover space, when that holds more
+                total, placed = mixed_fill(mixed_items(mesh, top[:2], upright), inner, deadline + 2)
+                if total > best["clusters"] * best_cl["pcs"]:
+                    zs = sorted({round(o[2], 2) for _, o in placed})
+                    used_h = max(o[2] + it["dims"][2] for it, o in placed)
+                    first = next((it for it, _ in placed if it["kind"] == "cluster"), None)
+                    methods.append({
+                        "id": mid, "name": name, "count": int(total),
+                        "clusterIndex": clusters.index(first["cl"]) if first else None,
+                        "piecesPerCluster": first["pcs"] if first else 1,
+                        "singles": sum(1 for it, _ in placed if it["kind"] == "single"),
+                        "layers": len(zs), "perLayer": math.ceil(total / max(1, len(zs))),
+                        "usedH": round(float(used_h), 2),
+                        "pitch": [round(float(x), 2) for x in (first or placed[0][0])["dims"]],
+                        "nested": False, "mixed": True,
+                        "computeMs": round((time.monotonic() - t1) * 1000 + build_ms / 2),
+                        "copies": [[round(float(x), 5) for x in M[:3].flatten()] for M in mixed_copies(placed, max_copies)]
+                    })
+                    continue
             methods.append({
                 "id": mid, "name": name, "count": int(best["clusters"] * best_cl["pcs"]),
                 "clusterIndex": clusters.index(best_cl), "piecesPerCluster": best_cl["pcs"],
@@ -250,6 +271,10 @@ def cluster_pack(mesh, voxel_models, cartons, upright, budget_s, max_copies=1500
                 "computeMs": round((time.monotonic() - t1) * 1000 + build_ms / 2),
                 "copies": [[round(float(x), 5) for x in M[:3].flatten()] for M in copies]  # 3×4 row-major each
             })
+        # Nested Clusters may also use the mixed fill: never report it worse than Cluster Packing
+        byid = {m["id"]: m for m in methods}
+        if "cluster" in byid and "nested" in byid and byid["cluster"]["count"] > byid["nested"]["count"]:
+            methods[methods.index(byid["nested"])] = {**byid["cluster"], "id": "nested", "name": "Nested Clusters"}
         out_cartons.append({"id": c["id"], "methods": methods})
 
     listing = []
@@ -262,3 +287,128 @@ def cluster_pack(mesh, voxel_models, cartons, upright, budget_s, max_copies=1500
             "pieces": [[round(float(x), 5) for x in P[:3].flatten()] for P in cl["pieces"]] if i < 12 else None
         })
     return {"clusters": listing, "considered": len(clusters), "computeMs": round((time.monotonic() - t0) * 1000), "cartons": out_cartons}
+
+
+# ---------------------------------------------------------------------------------------------
+# Mixed fill: clusters where they fit, single parts in the space that is left over.
+# A carton rarely is an exact multiple of the cluster size (a 112 mm pair in a 154 mm carton
+# leaves 42 mm). The carton is cut into blocks (guillotine cuts, like a saw), each block is
+# filled with a grid of one item — a cluster or a single part, in any allowed turn — and the
+# split that holds the most pieces wins. Items are exact boxes, so blocks never overlap.
+# ---------------------------------------------------------------------------------------------
+
+def _turns(ext, upright):
+    """(dims, 4×4) for every allowed turn of a box with min corner 0 and size ext."""
+    from pack import rotations
+    out, seen = [], set()
+    for R in rotations(upright):
+        corners = np.array(list(itertools.product(*[(0.0, e) for e in ext])))
+        rc = corners @ R.T
+        lo, hi = rc.min(0), rc.max(0)
+        dims = tuple(round(float(x), 3) for x in hi - lo)
+        if dims in seen:
+            continue
+        seen.add(dims)
+        M = np.eye(4)
+        M[:3, :3] = R
+        M[:3, 3] = -lo
+        out.append((dims, M))
+    return out
+
+
+def _cuts(L, sizes, cap=48):
+    """Cut positions along one side: sums of item sizes (≤ L), smallest first."""
+    reach = {0.0}
+    for _ in range(64):
+        new = {round(r + s, 3) for r in reach for s in sizes if r + s <= L + 1e-6} - reach
+        if not new:
+            break
+        reach |= new
+        if len(reach) > 4 * cap:
+            break
+    return sorted(x for x in reach if 0 < x < L - 1e-6)[:cap]
+
+
+def mixed_fill(items, inner, deadline, depth=2):
+    """items: [{dims, M, pieces, pcs, ref}] (one entry per item and turn).
+    Returns (pieces count, [(item, origin xyz)]) for the best guillotine split of the carton."""
+    memo = {}
+    sizes = [sorted({it["dims"][a] for it in items}) for a in range(3)]
+
+    def grid(B):
+        best = (0, None, None)
+        for it in items:
+            n = [int(B[a] // it["dims"][a] + 1e-9) for a in range(3)]
+            v = n[0] * n[1] * n[2] * it["pcs"]
+            if v > best[0]:
+                best = (v, it, n)
+        return best
+
+    def solve(B, d):
+        key = (round(B[0], 2), round(B[1], 2), round(B[2], 2), d)
+        if key in memo:
+            return memo[key]
+        g = grid(B)
+        best = (g[0], ("grid", g[1], g[2]))
+        if d > 0 and time.monotonic() < deadline:
+            for a in range(3):
+                for x in _cuts(B[a], sizes[a]):
+                    A1 = list(B); A1[a] = x
+                    A2 = list(B); A2[a] = B[a] - x
+                    v = solve(tuple(A1), d - 1)[0]
+                    if v == 0:
+                        continue
+                    v += solve(tuple(A2), d - 1)[0]
+                    if v > best[0]:
+                        best = (v, ("cut", a, x))
+        memo[key] = best
+        return best
+
+    placed = []
+
+    def place(B, o, d):
+        v, how = solve(B, d)
+        if not v:
+            return
+        if how[0] == "grid":
+            _, it, n = how
+            for i, j, k in itertools.product(range(n[0]), range(n[1]), range(n[2])):
+                placed.append((it, (o[0] + i * it["dims"][0], o[1] + j * it["dims"][1], o[2] + k * it["dims"][2])))
+        else:
+            _, a, x = how
+            A1 = list(B); A1[a] = x
+            A2 = list(B); A2[a] = B[a] - x
+            o2 = list(o); o2[a] += x
+            place(tuple(A1), o, d - 1)
+            place(tuple(A2), tuple(o2), d - 1)
+
+    total = solve(tuple(float(x) for x in inner), depth)[0]
+    place(tuple(float(x) for x in inner), (0.0, 0.0, 0.0), depth)
+    return total, placed
+
+
+def mixed_items(mesh, clusters, upright):
+    """Items for mixed_fill: the best clusters and the single part, each in every allowed turn."""
+    single_pieces = [np.eye(4)]
+    single_pieces[0][:3, 3] = -mesh.bounds[0]
+    units = [("single", None, single_pieces, np.asarray(mesh.extents, float), 1)]
+    for cl in clusters:
+        units.append(("cluster", cl, cl["pieces"], np.asarray(cl["ext"], float), cl["pcs"]))
+    items = []
+    for kind, cl, pieces, ext, pcs in units:
+        for dims, M in _turns(ext, upright):
+            items.append({"dims": dims, "M": M, "pieces": pieces, "pcs": pcs, "kind": kind, "cl": cl})
+    return items
+
+
+def mixed_copies(placed, max_copies):
+    """Exact 4×4 (part → carton) for every piece, bottom layer first (so a weight limit drops the top)."""
+    out = []
+    for it, o in sorted(placed, key=lambda p: (p[1][2], p[1][0], p[1][1])):
+        t = np.eye(4)
+        t[:3, 3] = o
+        for P in it["pieces"]:
+            if len(out) >= max_copies:
+                return out
+            out.append(t @ it["M"] @ P)
+    return out

@@ -33,7 +33,7 @@ export default function Viewer3D({ boxes, layers = [], dims, height = 420, capti
   const center = [bounds[0] * S / 2, bounds[1] * S / 2, bounds[2] * S / 2];
   // long, thin scenes (a container) get a closer camera so the load fills the view
   const [b1, b2] = [...bounds].sort((u, v) => v - u);
-  const k = b2 > 0 && b1 / b2 > 2.5 ? 0.55 : 1;
+  const k = b2 > 0 && b1 / b2 > 2.5 ? 0.72 : 1;
   const cam = [center[0] + span * 1.25 * k, center[1] + span * 0.9 * k, center[2] + span * 1.45 * k];
 
   // keep each box's own index as its key, so turning a layer off never hands one box another's geometry
