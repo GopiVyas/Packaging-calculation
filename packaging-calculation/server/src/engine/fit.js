@@ -49,14 +49,78 @@ export function cartonOuter(carton) {
   return { l: carton.innerL + t, w: carton.innerW + t, h: carton.innerH + t };
 }
 
-/** Floor pattern for boxes of l×w on an L×W area: same direction, best of the two turns. */
-export function floorPattern(L, W, l, w) {
-  const a = { cols: f(L / l), rows: f(W / w), rotated: false };
-  const b = { cols: f(L / w), rows: f(W / l), rotated: true };
-  const pa = a.cols * a.rows;
-  const pb = b.cols * b.rows;
-  const p = pb > pa ? b : a;
-  return { ...p, count: Math.max(pa, pb), itemL: p.rotated ? w : l, itemW: p.rotated ? l : w };
+/** Lengths reachable as a·l + b·w (≤ L): the only places a guillotine cut needs to be tried. */
+function cutPositions(L, l, w) {
+  const out = new Set();
+  for (let a = 0; a * l <= L + 1e-9; a++) {
+    for (let b = 0; a * l + b * w <= L + 1e-9; b++) {
+      const x = a * l + b * w;
+      if (x > 0 && x < L - 1e-9) out.add(Math.round(x * 1000) / 1000);
+    }
+  }
+  return [...out];
+}
+
+/**
+ * Floor pattern for boxes of l×w on an L×W area. Boxes may be turned 90° on the floor and the
+ * pattern may mix both directions in blocks (guillotine cuts, up to `depth` levels), e.g. Euro
+ * pallets in a 40 ft container: one row lengthwise + one row crosswise = 25 instead of 20.
+ * Returns the count, every box position (rects: x, y, l, w) and, for older callers, the main
+ * block as cols × rows.
+ */
+export function floorPattern(L, W, l, w, depth = 3) {
+  const memo = new Map();
+  const single = (A, B) => {
+    const a = f(A / l + 1e-9) * f(B / w + 1e-9);
+    const b = f(A / w + 1e-9) * f(B / l + 1e-9);
+    return b > a ? { n: b, kind: 'grid', il: w, iw: l } : { n: a, kind: 'grid', il: l, iw: w };
+  };
+  const best = (A, B, d) => {
+    const key = `${A}|${B}|${d}`;
+    if (memo.has(key)) return memo.get(key);
+    let r = single(A, B);
+    if (d > 0) {
+      for (const x of cutPositions(A, l, w)) { // cut across the length
+        const n = best(x, B, d - 1).n + best(A - x, B, d - 1).n;
+        if (n > r.n) r = { n, kind: 'x', at: x };
+      }
+      for (const y of cutPositions(B, l, w)) { // cut across the width
+        const n = best(A, y, d - 1).n + best(A, B - y, d - 1).n;
+        if (n > r.n) r = { n, kind: 'y', at: y };
+      }
+    }
+    memo.set(key, r);
+    return r;
+  };
+  const rects = [];
+  const place = (x0, y0, A, B, d) => {
+    const r = best(A, B, d);
+    if (!r.n) return;
+    if (r.kind === 'grid') {
+      for (let i = 0; i < f(A / r.il + 1e-9); i++) {
+        for (let j = 0; j < f(B / r.iw + 1e-9); j++) rects.push({ x: x0 + i * r.il, y: y0 + j * r.iw, l: r.il, w: r.iw });
+      }
+    } else if (r.kind === 'x') {
+      place(x0, y0, r.at, B, d - 1);
+      place(x0 + r.at, y0, A - r.at, B, d - 1);
+    } else {
+      place(x0, y0, A, r.at, d - 1);
+      place(x0, y0 + r.at, A, B - r.at, d - 1);
+    }
+  };
+  place(0, 0, L, W, depth);
+  // load order: from the front wall backwards, then across
+  rects.sort((p, q) => p.x - q.x || p.y - q.y);
+  const g = single(L, W);
+  const rotated = g.il !== l;
+  return {
+    count: rects.length,
+    rects,
+    mixed: rects.some((r) => r.l !== rects[0].l),
+    usedL: rects.reduce((m, r) => Math.max(m, r.x + r.l), 0),
+    usedW: rects.reduce((m, r) => Math.max(m, r.y + r.w), 0),
+    cols: f(L / g.il + 1e-9), rows: f(W / g.iw + 1e-9), rotated, itemL: g.il, itemW: g.iw
+  };
 }
 
 /**

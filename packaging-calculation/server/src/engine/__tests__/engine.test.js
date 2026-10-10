@@ -3,7 +3,7 @@
 // Industrial pallet 1200×1000, 20 ft container, freight ₹1,20,000 per container).
 import { describe, it, expect } from 'vitest';
 import { boxForShape, toMm, toKg, calculatePlan, suggestCartons, planLine } from '../index.js';
-import { fitPartsInCarton, fitCartonsOnPallet, fitPalletsInContainer } from '../fit.js';
+import { fitPartsInCarton, fitCartonsOnPallet, fitPalletsInContainer, floorPattern } from '../fit.js';
 
 const hub = { _id: 'hub', name: 'Wheel hub', box: { l: 220, w: 220, h: 120 }, weightKg: 2.4, upright: true };
 const disc = { _id: 'disc', name: 'Brake disc', box: { l: 300, w: 300, h: 60 }, weightKg: 4.5, upright: false };
@@ -58,18 +58,42 @@ describe('cartons on a pallet, pallets in a container', () => {
     expect(r.palletKg).toBeCloseTo(505, 6);
     expect(r.fill).toBeCloseTo(0.64, 2);
   });
-  it('Carton S2 turns on the pallet: 5 per layer', () => {
+  it('Carton S2 mixes directions on the pallet: 6 per layer (one direction only fits 5)', () => {
+    // 1200×1000: 5 cartons crosswise (235 along × 675 across) + 1 lengthwise in the strip left over
     const r = fitCartonsOnPallet({ l: 675, w: 235, h: 255 }, 15.1, industrial);
-    expect(r).toMatchObject({ perLayer: 5, layers: 6, perPallet: 30 });
-    expect(r.layer.rotated).toBe(true);
+    expect(r).toMatchObject({ perLayer: 6, layers: 6, perPallet: 36 });
+    expect(r.layer.mixed).toBe(true);
   });
   it('brake disc pallet is limited by weight: 54 fit, 53 allowed', () => {
     const r = fitCartonsOnPallet({ l: 315, w: 315, h: 260 }, 18.6, industrial);
     expect(r).toMatchObject({ perLayer: 9, layers: 6, perPallet: 53, limitedBy: 'weight' });
   });
-  it('20 ft container takes 8 Industrial pallets on the floor', () => {
+  it('20 ft container takes 9 Industrial pallets: a lengthwise row and a crosswise row (one direction: 8)', () => {
     const r = fitPalletsInContainer(1200, 1000, 1680, 505, c20);
-    expect(r).toMatchObject({ slots: 8, perContainer: 8, floor: { cols: 4, rows: 2 } });
+    expect(r).toMatchObject({ slots: 9, perContainer: 9 });
+    expect(r.floor.mixed).toBe(true);
+  });
+  it.each([
+    ['Euro pallets, 40 ft high cube', 12032, 2352, 1200, 800, 25],
+    ['Euro pallets, 20 ft', 5898, 2352, 1200, 800, 11],
+    ['Industrial pallets, 40 ft', 12032, 2352, 1200, 1000, 22],
+    ['410×310 cartons on a Euro pallet', 1200, 800, 410, 310, 5],
+    ['400×300 cartons on a Euro pallet', 1200, 800, 400, 300, 8]
+  ])('%s: %i×%i floor, %i×%i boxes → %i, none overlapping, all inside', (_, L, W, l, w, n) => {
+    const r = floorPattern(L, W, l, w);
+    expect(r.count).toBe(n);
+    const eps = 1e-6;
+    for (const a of r.rects) {
+      expect([a.l, a.w].sort((u, v) => u - v)).toEqual([l, w].sort((u, v) => u - v));
+      expect(a.x >= -eps && a.y >= -eps && a.x + a.l <= L + eps && a.y + a.w <= W + eps).toBe(true);
+    }
+    for (let i = 0; i < r.rects.length; i++) {
+      for (let j = i + 1; j < r.rects.length; j++) {
+        const a = r.rects[i], b = r.rects[j];
+        const apart = a.x + a.l <= b.x + eps || b.x + b.l <= a.x + eps || a.y + a.w <= b.y + eps || b.y + b.w <= a.y + eps;
+        expect(apart).toBe(true);
+      }
+    }
   });
   it('a pallet taller than the container does not fit', () => {
     expect(fitPalletsInContainer(1200, 1000, 2500, 505, c20).perContainer).toBe(0);
@@ -80,10 +104,10 @@ describe('whole line', () => {
   const run = (carton) => planLine({ part: hub, qty: 2000, carton, pallet: industrial, container: c20, freightCost: FREIGHT });
   it.each([
     ['S1', 250, 11, 2, 259500],
-    ['S2', 334, 12, 2, 258370],
+    ['S2', 334, 10, 2, 258370],
     ['S3', 500, 11, 2, 262500],
     ['B', 250, 21, 3, 382500],
-    ['A', 500, 50, 7, 875000]
+    ['A', 500, 34, 4, 515000] // mixed pallet layers: 4 containers instead of 7
   ])('%s: %i cartons, %i pallets, %i containers, ₹%i', (id, cartonsN, pallets, containers, cost) => {
     expect(run(cartons[id])).toMatchObject({ cartons: cartonsN, pallets, containers, totalCost: cost });
   });
@@ -99,11 +123,11 @@ describe('ranking by goal and the mixed order', () => {
   });
   const discOnly = calculatePlan({ lines: [{ part: disc, qty: 600 }], cartons: [cartons.D1], pallet: industrial, container: c20, freightCost: FREIGHT });
 
-  it('picks S2 for lowest cost, S1 for fewest containers and cartons, S3 for space', () => {
+  it('picks S2 for lowest cost and space, S1 for fewest containers and cartons', () => {
     expect(result.goals.cost.lines[0].recommendedId).toBe('S2');
     expect(result.goals.containers.lines[0].recommendedId).toBe('S1');
     expect(result.goals.cartons.lines[0].recommendedId).toBe('S1');
-    expect(result.goals.space.lines[0].recommendedId).toBe('S3');
+    expect(result.goals.space.lines[0].recommendedId).toBe('S2');
   });
   it('explains the pick in plain words', () => {
     expect(result.goals.cost.lines[0].explanation).toContain('₹1,130 less than the next option, Carton S1');

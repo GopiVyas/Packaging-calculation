@@ -38,7 +38,7 @@ export function packContainers(lines, container, floorLoad = false) {
 
   return boxes.map((b, i) => ({
     n: i + 1,
-    totalSlots: floorLoad ? 1 : b.floor.cols * b.floor.rows,
+    totalSlots: floorLoad ? 1 : b.floor.count,
     used: b.items.length,
     kg: Math.round(b.kg),
     payloadKg: container.payloadKg,

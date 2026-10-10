@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { textOn } from '../components/Pictures.jsx';
 import { Check } from '../components/Icons.jsx';
 import { num } from '../format.js';
+import { floorRects, slotStyle } from '../floorRects.js';
 
 export default function ShareView() {
   const { token } = useParams();
@@ -37,9 +38,11 @@ export default function ShareView() {
   const line = r.lines[cur.lineIndex];
   const opt = optFor(cur.lineIndex);
   const n = cur.order;
-  const rows = box.floor.rows;
-  const along = Math.ceil(n / rows);
-  const side = rows === 1 ? 'centre' : n % rows === 1 ? 'left side' : n % rows === 0 ? 'right side' : 'middle';
+  const rects = floorRects(box.floor);
+  const here = rects[(n - 1) % Math.max(1, rects.length)] || { x: 0, y: 0, l: 0, w: 0 };
+  const along = new Set(rects.filter((q) => q.x <= here.x + 1e-6).map((q) => q.x)).size;
+  const W = r.container.innerW;
+  const side = here.w >= W * 0.6 ? 'centre' : here.y < 1 ? 'left side' : here.y + here.w > W - Math.min(...rects.map((q) => q.w)) ? 'right side' : 'middle';
   const loadedKg = box.slots.slice(0, step).reduce((a, s) => a + s.kg, 0);
   const last = step >= total - 1;
   const lastBox = ci >= g.containers.length - 1;
@@ -74,13 +77,15 @@ export default function ShareView() {
 
       <div style={{ padding: '14px 16px 0' }}>
         <div role="img" aria-label="Container top view, current slot highlighted" className="container-box"
-          style={{ aspectRatio: `${r.container.innerL} / ${r.container.innerW}`, gridTemplateColumns: `repeat(${box.floor.cols}, calc(${(box.floor.itemL / r.container.innerL) * 100}% - 3px))`, gridTemplateRows: `repeat(${rows}, calc(${(box.floor.itemW / r.container.innerW) * 100}% - 3px))`, gap: 3, padding: 3 }}>
+          style={{ aspectRatio: `${r.container.innerL} / ${r.container.innerW}`, position: 'relative', display: 'block' }}>
           {slots.map((s, i) => {
-            if (!s) return <div key={i} className="slot free" />;
+            const pos = slotStyle(rects[i], r.container.innerL, r.container.innerW, 1.5);
+            if (!s) return <div key={i} className="slot free" style={pos} />;
             const c = r.lines[s.lineIndex].color;
             const state = i < step ? 'done' : i === step ? 'now' : 'next';
             return (
               <div key={i} className="slot" style={{
+                ...pos,
                 background: state === 'next' ? '#E7E5DF' : c,
                 color: state === 'next' ? '#3D434B' : textOn(c),
                 border: state === 'now' ? '3px solid var(--accent)' : 0, fontSize: 13, fontWeight: 600

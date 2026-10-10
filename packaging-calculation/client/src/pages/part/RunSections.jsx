@@ -1,5 +1,6 @@
 // Sections 1 and 4–8 of the part page, all driven by one calculation run.
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { api, apiBase } from '../../api.js';
 import { useAuth, useCan } from '../../auth.jsx';
@@ -108,9 +109,11 @@ export function SettingsSection({ part, runs, run, onPick, onRan, canEdit }) {
             <summary>{run ? 'Change settings and run again' : 'Settings for the first run'}</summary>
             <div className="stack" style={{ marginTop: 12 }}>
               <fieldset className="fs"><legend>Cartons</legend>
-                <div className="chips">{master.cartons.map((c) => (
+                {master.cartons.length ? <div className="chips">{master.cartons.map((c) => (
                   <label key={c._id} className="chip"><input type="checkbox" checked={form.cartonIds.includes(c._id)} onChange={() => toggle('cartonIds', c._id)} />{c.name}</label>
                 ))}</div>
+                  : <p className="notice" style={{ margin: 0 }}><span>There are no cartons yet, so there is nothing to pack into. Add at least one in <Link to="/cartons">Master data → Cartons</Link>, then come back here.</span></p>}
+                {master.cartons.length > 0 && !form.cartonIds.length && <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>Tick at least one carton.</p>}
               </fieldset>
               <div className="field"><label htmlFor="rp">Pallet</label>
                 <select id="rp" className="input" value={form.palletId} onChange={(e) => setForm({ ...form, palletId: e.target.value })}>
@@ -169,7 +172,11 @@ export function CartonSection({ run, sel, setSel, part }) {
     if (shown === 'grid') return cartonScene(c, { baseline: !trimmedView, cad });
     return realScene(c, c.arrangements[shown], trimmedView);
   }, [c, shown, trimmedView, cad]);
-  if (!c) return <Section n={4} id="sec4" left={<p className="muted">The part does not fit in any carton of this run.</p>} right={null} />;
+  if (!c) return <Section n={4} id="sec4" left={<div className="sec-pad-full">
+    <p style={{ marginTop: 0 }}><b>The part does not fit in any carton of this run</b>, so there is nothing to put on pallets or in containers (sections 5–7).</p>
+    {r.skipped?.length > 0 && <ul style={{ margin: '0 0 12px', paddingLeft: 20 }}>{r.skipped.map((x) => <li key={x.id}><b>{x.name}</b>: {x.reason}</li>)}</ul>}
+    <p className="muted" style={{ margin: 0 }}>Fix the carton in <Link to="/cartons">Master data → Cartons</Link> (sizes are inside dimensions in mm) or tick another carton in section 1, then run again.</p>
+  </div>} right={null} />;
   const outer = trimmedView ? c.outer : c.baselineOuter;
   const inner = trimmedView ? c.inner : c.originalInner;
   const arr = shown === 'grid' ? null : c.arrangements[shown];
@@ -288,7 +295,7 @@ export function ClusterSection({ run, part }) {
   const empty = (msg) => <Section n={3} id="sec3"><p className="muted sec-pad-full" style={{ margin: 0 }}>{msg}</p></Section>;
   if (!run || run.status !== 'done') return empty('Run the calculation in section 1 to see clusters.');
   if (r.part.shape !== 'cad') return empty('Clusters need the real geometry: upload a STEP file in section 2, then run with the Standard or Thorough preset.');
-  if (!list?.length) return empty(run.preset === 'quick' ? 'The Quick preset skips clusters. Run with Standard or Thorough.' : (r.realShapeError || 'No clusters were found for this run.'));
+  if (!list?.length) return empty(run.preset === 'quick' ? 'The Quick preset skips clusters. Run with Standard or Thorough.' : (r.realShapeError || 'No cluster packs denser than single parts. Turning this part gives the same shape or nothing that interlocks, so stacking (section 4) is the better method.'));
   const shownList = open ? list : list.slice(0, 1);
 
   return (
@@ -333,14 +340,15 @@ export function PalletSection({ run, sel }) {
       left={<>
         <div className="viewer-bar"><b>{P.name}</b></div>
         <Viewer3D key={c.id} boxes={scene.boxes} dims={scene.dims} fileName={`${r.part.name}-pallet`}
-          layers={[{ id: 'stack', label: 'Carton stack', on: false }, { id: 'loaded', label: 'Loaded pallet', on: true }, { id: 'limit', label: 'Stack limit', on: false }]} />
+          caption={`${c.pallet.perPallet} cartons · ${c.pallet.perLayer} per layer${c.pallet.layer.mixed ? ' (mixed directions)' : ''}`}
+          layers={[{ id: 'loaded', label: 'Cartons', on: true }, { id: 'deck', label: 'Pallet deck', on: true }, { id: 'stack', label: 'Carton stack outline', on: false }, { id: 'limit', label: 'Stack limit', on: true }]} />
       </>}
       right={<>
         <h3 className="sub">This pallet</h3>
         <Facts rows={[
           ['Footprint (outer)', `${num(P.L)} × ${num(P.W)} mm`],
           ['Deck height', `${num(P.deckH)} mm`],
-          ['Carton stack', `${num(c.pallet.layer.cols * c.pallet.layer.itemL)} × ${num(c.pallet.layer.rows * c.pallet.layer.itemW)} × ${num(c.pallet.stackH)} mm`],
+          ['Carton stack', `${num(scene.usedL)} × ${num(scene.usedW)} × ${num(c.pallet.stackH)} mm`],
           ['Loaded pallet', `${num(P.L)} × ${num(P.W)} × ${num(c.pallet.heightMm)} mm`],
           ['Stack limit', `${num(P.L)} × ${num(P.W)} × ${num(P.maxStackH - P.deckH)} mm (stack limit ${num(P.maxStackH)} − deck ${num(P.deckH)})`],
           ['Weight limit', `${num(P.maxLoadKg)} kg · tare ${num(P.weightKg)} kg`]
@@ -348,7 +356,7 @@ export function PalletSection({ run, sel }) {
         <h3 className="sub" style={{ marginTop: 20 }}>This load</h3>
         <Facts rows={[
           ['Carton (outer)', `${d3(c.outer)} mm${c.trimmed ? ` · height optimised from ${num(c.baselineOuter.h)} mm` : ''}`],
-          ['Cartons per layer', c.pallet.perLayer],
+          ['Cartons per layer', `${c.pallet.perLayer}${c.pallet.layer.mixed ? ' · mixed directions' : ''}`],
           ['Pallet layers', c.pallet.layers],
           ['Cartons per pallet', c.pallet.perPallet],
           ['Pieces per pallet', <b key="p">{num(c.piecesPerPallet)}</b>],
@@ -378,15 +386,15 @@ export function ContainerSection({ run, sel, ctSel, setCtSel }) {
         </div>
         <Viewer3D key={`${c.id}-${ct.id}`} boxes={scene.boxes} dims={scene.dims} fileName={`${r.part.name}-${ct.name}`} height={380}
           caption={`${ct.pallets} loaded pallets drawn · ${LIMIT[ct.limitedBy]}-bound`}
-          layers={[{ id: 'stack', label: 'Loaded stack', on: false }, { id: 'space', label: 'Load space', on: true }, { id: 'shell', label: 'Container', on: true }]} />
+          layers={[{ id: 'pallets', label: 'Pallets', on: true }, { id: 'stack', label: 'Loaded stack outline', on: false }, { id: 'space', label: 'Load space', on: true }, { id: 'shell', label: 'Container', on: true }]} />
       </>}
       right={<>
         <h3 className="sub">This container</h3>
         <Facts rows={[
           ['Inner size', `${d3(ct.inner)} mm`],
           ['Load space', `${num(ct.inner.l)} × ${num(ct.inner.w)} × ${num(ct.loadH)} mm (inner height ${num(ct.inner.h)} − clearance ${num(r.settings.clearanceMm)})`],
-          ['Loaded stack', `${num(Math.ceil(Math.min(ct.pallets, ct.perFloorLayer) / ct.floor.rows) * ct.floor.itemL)} × ${num(ct.floor.rows * ct.floor.itemW)} × ${num(c.pallet.heightMm * ct.tiers)} mm`],
-          ['Pallets per floor layer', ct.perFloorLayer],
+          ['Loaded stack', `${num(scene.stackL)} × ${num(scene.stackW)} × ${num(c.pallet.heightMm * ct.tiers)} mm`],
+          ['Pallets per floor layer', `${ct.perFloorLayer}${ct.floor.mixed ? ' · lengthwise and crosswise' : ''}`],
           ['Pallets stacked', `${ct.tiers} · loaded pallet ${num(c.pallet.heightMm)} mm`],
           ['Pallets loaded', <span key="pl"><b>{ct.pallets}</b> {LIMIT[ct.limitedBy]}-bound</span>],
           ['Weight', `${num(ct.kg)} kg of ${num(ct.payloadKg)} kg`]

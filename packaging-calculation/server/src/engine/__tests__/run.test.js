@@ -22,20 +22,20 @@ describe('runPart', () => {
     expect(c.pallet).toMatchObject({ perLayer: 4, layers: 3, perPallet: 12, heightMm: 900 });
     expect(c.piecesPerPallet).toBe(96);
   });
-  it('stacks pallets 2 high under 2393 − 50 mm: 20 ft = 8 × 2 = 16 pallets, 1,536 pieces', () => {
+  it('stacks pallets 2 high under 2393 − 50 mm: 20 ft = 9 × 2 = 18 pallets, 1,728 pieces', () => {
     const k = c.containers.find((x) => x.id === 'c20');
-    expect(k).toMatchObject({ perFloorLayer: 8, tiers: 2, pallets: 16, pieces: 1536, limitedBy: 'volume' });
+    expect(k).toMatchObject({ perFloorLayer: 9, tiers: 2, pallets: 18, pieces: 1728, limitedBy: 'volume' });
   });
-  it('40 ft = 10 × 2 = 20 pallets; recommends the lower cost per piece', () => {
+  it('40 ft = 22 × 2 = 44 pallets; recommends the lower cost per piece', () => {
     const k40 = c.containers.find((x) => x.id === 'c40');
-    expect(k40).toMatchObject({ perFloorLayer: 20, pallets: 40, pieces: 3840 });
-    // per piece: carton 78/8 = 9.75 + freight 180000/3840 = 46.875 → 56.625 ; 20 ft: 9.75 + 120000/1536 = 87.875
-    expect(k40.costPerPiece).toBeCloseTo(56.625, 3);
+    expect(k40).toMatchObject({ perFloorLayer: 22, pallets: 44, pieces: 4224 });
+    // per piece: carton 78/8 = 9.75 + freight 180000/4224 = 42.6136 → 52.3636 ; 20 ft: 9.75 + 120000/1728 = 79.1944
+    expect(k40.costPerPiece).toBeCloseTo(52.3636, 3);
     expect(c.bestContainerId).toBe('c40');
   });
   it('no stacking when maxTiers = 1', () => {
     const one = runPart({ part: hub, cartons: [S1], pallet: lowPallet, containers: [c20], settings: { maxTiers: 1 } });
-    expect(one.cartons[0].containers[0].pallets).toBe(8);
+    expect(one.cartons[0].containers[0].pallets).toBe(9);
   });
 });
 

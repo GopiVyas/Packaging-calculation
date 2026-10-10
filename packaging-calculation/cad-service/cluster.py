@@ -105,6 +105,11 @@ def best_pairs(u, deadline, keep=3, search_frac=0.5, upright=False):
         if time.monotonic() > deadline:
             break
         Gf, piecesB = flip_unit(u, axes)
+        # A turn that leaves the part looking the same (a round tray turned about its axis) gives
+        # no cluster, only a plain stack of identical copies, which Column Stacking already does
+        # exactly. Skip it.
+        if Gf.shape == u.grid.shape and np.count_nonzero(Gf ^ u.grid) <= 0.03 * np.count_nonzero(u.grid):
+            continue
         search = max(1, int(max(u.grid.shape) * search_frac))
         step = max(1, search // 16)
         offs = approach_offsets(u.grid, Gf, search, step)
@@ -213,6 +218,8 @@ def cluster_pack(mesh, voxel_models, cartons, upright, budget_s, max_copies=1500
             break
         clusters += build_clusters(hull, G, T, h, origin, deadline, upright, mesh.extents, part_vol)
     clusters.sort(key=lambda c: -c["vsLoose"])
+    # only clusters that pack denser than loose single parts are worth showing or packing
+    clusters = [c for c in clusters if c["vsLoose"] > 1.02]
     top = clusters[:4]
     build_ms = (time.monotonic() - t0) * 1000
 

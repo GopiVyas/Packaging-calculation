@@ -31,9 +31,13 @@ export default function Viewer3D({ boxes, layers = [], dims, height = 420, capti
   }, [boxes]);
   const span = Math.max(...bounds) * S || 1;
   const center = [bounds[0] * S / 2, bounds[1] * S / 2, bounds[2] * S / 2];
-  const cam = [center[0] + span * 1.25, center[1] + span * 0.9, center[2] + span * 1.45];
+  // long, thin scenes (a container) get a closer camera so the load fills the view
+  const [b1, b2] = [...bounds].sort((u, v) => v - u);
+  const k = b2 > 0 && b1 / b2 > 2.5 ? 0.55 : 1;
+  const cam = [center[0] + span * 1.25 * k, center[1] + span * 0.9 * k, center[2] + span * 1.45 * k];
 
-  const visible = boxes.filter((b) => !b.layer || on[b.layer]);
+  // keep each box's own index as its key, so turning a layer off never hands one box another's geometry
+  const visible = boxes.map((b, i) => [b, i]).filter(([b]) => !b.layer || on[b.layer]);
 
   const downloadGlb = () => {
     if (!sceneRef.current) return;
@@ -56,7 +60,7 @@ export default function Viewer3D({ boxes, layers = [], dims, height = 420, capti
           <directionalLight position={[span * 2, span * 3, span * 1.5]} intensity={1.1} />
           <directionalLight position={[-span, span, -span]} intensity={0.35} />
           <group ref={sceneRef}>
-            {visible.map((b, i) => <Block key={i} b={b} />)}
+            {visible.map(([b, i]) => <Block key={i} b={b} />)}
             <Suspense fallback={null}>
               {model && (!model.layer || on[model.layer]) && <CadModel url={model.url} box={model.box} />}
               {instances && (!instances.layer || on[instances.layer]) && <CadInstances url={instances.url} box={instances.box} items={instances.items} matrices={instances.matrices} />}

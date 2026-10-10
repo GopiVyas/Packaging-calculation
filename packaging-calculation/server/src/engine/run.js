@@ -34,11 +34,23 @@ export function runPart({ part, cartons, pallet, containers, settings = {}, real
   const partVol = part.volumeMm3 || part.box.l * part.box.w * part.box.h;
 
   const results = [];
+  const skipped = []; // cartons the part does not fit in, with the reason
   for (const [ci, carton] of cartons.entries()) {
     onProgress({ pct: Math.round((ci / cartons.length) * 100), step: `Packing ${carton.name} (${ci + 1} of ${cartons.length})` });
     const t1 = Date.now();
     const fit = fitPartsInCarton(part.box, part.weightKg, part.upright, carton);
-    if (fit.perCarton < 1) continue;
+    if (fit.perCarton < 1) {
+      // say why, so the user can fix the carton in Master data
+      const pb = part.box;
+      const dims = (x, y, z) => `${Math.round(x)} × ${Math.round(y)} × ${Math.round(z)} mm`;
+      skipped.push({
+        id: String(carton._id ?? carton.name), name: carton.name,
+        reason: fit.spaceCount < 1
+          ? `inside ${dims(carton.innerL, carton.innerW, carton.innerH)} is too small for the part (${dims(pb.l, pb.w, pb.h)}) in every position${part.upright ? ' it may take upright' : ''}`
+          : `max. weight ${carton.maxWeightKg || 0} kg is less than one part (${Math.round(part.weightKg * 1000) / 1000} kg)`
+      });
+      continue;
+    }
     const cid = String(carton._id ?? carton.name);
     const byWeight = part.weightKg > 0 ? Math.floor(carton.maxWeightKg / part.weightKg + 1e-9) : Infinity;
 
@@ -142,6 +154,7 @@ export function runPart({ part, cartons, pallet, containers, settings = {}, real
     pallet: { name: pallet.name, L: pallet.L, W: pallet.W, deckH: pallet.deckH, maxStackH: pallet.maxStackH, maxLoadKg: pallet.maxLoadKg, weightKg: pallet.weightKg },
     part: { name: part.name, box: part.box, weightKg: part.weightKg, upright: !!part.upright, shape: part.shape },
     cartons: results,
+    skipped,
     winner: results[0] ? { cartonId: results[0].id, containerId: results[0].bestContainerId } : null,
     realShape: realShape ? { voxelMm: realShape.voxelMm, computeMs: realShape.computeMs, timedOut: !!realShape.timedOut, clusterVoxelMm: realShape.clusterVoxelMm ?? null } : null,
     // Phase 5: every cluster the engine considered (best first) for section 3

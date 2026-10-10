@@ -1,3 +1,5 @@
+import { floorRects } from './floorRects.js';
+
 // Turn engine results into boxes for <Viewer3D>. All sizes in mm.
 // Viewer axes: x = length, y = height (up), z = width.
 
@@ -35,49 +37,50 @@ export function cartonScene(c, { baseline = false, cad = false } = {}) {
   return { boxes, items, dims: { l: outer.l, w: outer.w, h: outer.h }, shown: n };
 }
 
-/** Section 5: cartons stacked on the pallet. */
+/** Section 5: cartons stacked on the pallet (layers may mix carton directions). */
 export function palletScene(c, pallet) {
   const p = c.pallet;
-  const { cols, rows, itemL, itemW } = p.layer;
+  const rects = floorRects(p.layer);
   const ch = c.outer.h;
-  const boxes = [{ pos: [0, 0, 0], size: [pallet.L, pallet.deckH, pallet.W], color: DECK }];
+  const boxes = [{ pos: [0, 0, 0], size: [pallet.L, pallet.deckH, pallet.W], color: DECK, layer: 'deck' }];
   let n = 0;
-  for (let layer = 0; layer < p.layers; layer++) {
-    for (let r = 0; r < rows; r++) {
-      for (let k = 0; k < cols; k++) {
-        if (n >= p.perPallet) break;
-        boxes.push({ pos: [k * itemL, pallet.deckH + layer * ch, r * itemW], size: [itemL, ch, itemW], color: n % 2 ? LOAD : '#3573C2', edgeColor: '#1C3F70', layer: 'loaded' });
-        n++;
-      }
+  for (let layer = 0; n < p.perPallet && layer < p.layers; layer++) {
+    for (const q of rects) {
+      if (n >= p.perPallet) break;
+      boxes.push({ pos: [q.x, pallet.deckH + layer * ch, q.y], size: [q.l, ch, q.w], color: (layer + (q.l !== rects[0].l ? 1 : 0)) % 2 ? LOAD : '#3573C2', edgeColor: '#1C3F70', layer: 'loaded' });
+      n++;
     }
   }
-  const stackH = p.layers * ch;
-  boxes.push({ pos: [0, pallet.deckH, 0], size: [cols * itemL, stackH, rows * itemW], color: CARTON, opacity: 0.85, layer: 'stack' });
+  const usedL = Math.max(0, ...rects.map((q) => q.x + q.l));
+  const usedW = Math.max(0, ...rects.map((q) => q.y + q.w));
+  const stackH = p.heightMm - pallet.deckH;
+  // outline of the whole carton stack (wire, so it never hides the cartons)
+  boxes.push({ pos: [0, pallet.deckH, 0], size: [usedL || 1, stackH || 1, usedW || 1], wire: true, color: '#1E6B43', layer: 'stack' });
   boxes.push({ pos: [0, pallet.deckH, 0], size: [pallet.L, pallet.maxStackH - pallet.deckH, pallet.W], wire: true, color: '#C2410C', layer: 'limit' });
-  return { boxes, dims: { l: pallet.L, w: pallet.W, h: p.heightMm } };
+  return { boxes, dims: { l: pallet.L, w: pallet.W, h: p.heightMm }, usedL, usedW };
 }
 
-/** Section 6: loaded pallets in one container, stacked in tiers. */
+/** Section 6: loaded pallets in one container, stacked in tiers (floor may mix pallet directions). */
 export function containerScene(c, ct, pallet) {
-  const { cols, rows, itemL, itemW } = ct.floor;
+  const rects = floorRects(ct.floor);
   const ph = c.pallet.heightMm;
   const boxes = [
     { pos: [0, 0, 0], size: [ct.inner.l, ct.inner.h, ct.inner.w], color: '#9AA3AE', opacity: 0.12, layer: 'shell' },
     { pos: [0, 0, 0], size: [ct.inner.l, ct.loadH, ct.inner.w], wire: true, color: '#1E6B43', layer: 'space' }
   ];
   let n = 0;
-  for (let t = 0; t < ct.tiers; t++) {
-    for (let k = 0; k < cols; k++) {
-      for (let r = 0; r < rows; r++) {
-        if (n >= ct.pallets) break;
-        const y = t * ph;
-        boxes.push({ pos: [k * itemL, y, r * itemW], size: [itemL, pallet.deckH, itemW], color: DECK, edge: false });
-        boxes.push({ pos: [k * itemL + 5, y + pallet.deckH, r * itemW + 5], size: [itemL - 10, ph - pallet.deckH, itemW - 10], color: t ? '#5B95DE' : LOAD, edgeColor: '#1C3F70' });
-        n++;
-      }
+  for (let t = 0; t < ct.tiers && n < ct.pallets; t++) {
+    for (const q of rects) {
+      if (n >= ct.pallets) break;
+      const y = t * ph;
+      boxes.push({ pos: [q.x, y, q.y], size: [q.l, pallet.deckH, q.w], color: DECK, edge: false, layer: 'pallets' });
+      boxes.push({ pos: [q.x + 5, y + pallet.deckH, q.y + 5], size: [q.l - 10, ph - pallet.deckH, q.w - 10], color: t ? '#5B95DE' : q.l !== rects[0].l ? '#3573C2' : LOAD, edgeColor: '#1C3F70', layer: 'pallets' });
+      n++;
     }
   }
-  const stackL = Math.ceil(Math.min(ct.pallets, cols * rows) / rows) * itemL;
-  boxes.push({ pos: [0, 0, 0], size: [stackL || 1, ph * ct.tiers, rows * itemW], wire: true, color: '#C2410C', layer: 'stack' });
-  return { boxes, dims: { l: ct.inner.l, w: ct.inner.w, h: ct.loadH } };
+  const onFloor = rects.slice(0, Math.min(ct.pallets, rects.length));
+  const stackL = Math.max(0, ...onFloor.map((q) => q.x + q.l));
+  const stackW = Math.max(0, ...onFloor.map((q) => q.y + q.w));
+  boxes.push({ pos: [0, 0, 0], size: [stackL || 1, ph * ct.tiers, stackW || 1], wire: true, color: '#C2410C', layer: 'stack' });
+  return { boxes, dims: { l: ct.inner.l, w: ct.inner.w, h: ct.loadH }, stackL, stackW };
 }
