@@ -7,6 +7,9 @@ import { Database, LogOut } from 'lucide-react';
 
 const MASTER = ['/parts', '/cartons', '/pallets-containers'];
 
+// Language buttons are hidden until the DE / ZH translations are complete. Set to true to show them again.
+const SHOW_LANGUAGES = false;
+
 export default function TopNav() {
   const { session, logout } = useAuth();
   const { t, lang, setLang } = useI18n();
@@ -48,6 +51,7 @@ export default function TopNav() {
               {t('masterData')}
             </NavLink>
 
+            {SHOW_LANGUAGES && (
             <div className="langs" role="group" aria-label="Language selection">
               {['en', 'de', 'zh'].map((l) => (
                 <button
@@ -61,6 +65,7 @@ export default function TopNav() {
                 </button>
               ))}
             </div>
+            )}
 
             <span className="pill-dark" title={`Organization: ${org.name}`}>
               {entitlements?.label}

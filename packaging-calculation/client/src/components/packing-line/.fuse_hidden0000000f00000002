@@ -1,0 +1,99 @@
+import React from 'react';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../auth.jsx';
+import { useI18n } from '../../i18n.jsx';
+import { Logo } from '../Icons.jsx';
+import { Database, LogOut } from 'lucide-react';
+
+const MASTER = ['/parts', '/cartons', '/pallets-containers'];
+
+export default function TopNav() {
+  const { session, logout } = useAuth();
+  const { t, lang, setLang } = useI18n();
+  const nav = useNavigate();
+  const loc = useLocation();
+
+  if (!session) return null;
+  const { org, user, entitlements } = session;
+  const trialDays =
+    org.subscriptionStatus === 'trialing' && org.trialEndsAt
+      ? Math.max(0, Math.ceil((new Date(org.trialEndsAt) - Date.now()) / 864e5))
+      : null;
+  const inMaster = MASTER.some((p) => loc.pathname.startsWith(p));
+
+  return (
+    <>
+      <header className="topbar">
+        <div className="topbar-in">
+          <Link to="/projects" className="brand" title="PackSmart Home">
+            <Logo />
+            <span>Packaging Solution</span>
+          </Link>
+
+          <nav className="nav" aria-label="Main Navigation">
+            <NavLink to="/projects">{t('projects')}</NavLink>
+            <NavLink to="/jobs">{t('jobs')}</NavLink>
+            <NavLink to="/planner">Planner</NavLink>
+            <NavLink to="/plans">{t('plans')}</NavLink>
+            {user.role === 'owner' && <NavLink to="/team">{t('team')}</NavLink>}
+          </nav>
+
+          <div className="who">
+            <NavLink
+              to="/parts"
+              className={`master-btn ${inMaster ? 'on' : ''}`}
+              title="Manage Master Data (Parts, Cartons, Pallets)"
+            >
+              <Database size={13} style={{ marginRight: 4, display: 'inline' }} />
+              {t('masterData')}
+            </NavLink>
+
+            {SHOW_LANGUAGES && (
+            <div className="langs" role="group" aria-label="Language selection">
+              {['en', 'de', 'zh'].map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  aria-pressed={lang === l}
+                  onClick={() => setLang(l)}
+                  title={`Switch to ${l.toUpperCase()}`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            )}
+
+            <span className="pill-dark" title={`Organization: ${org.name}`}>
+              {entitlements?.label}
+              {trialDays !== null ? ` · trial ${trialDays}d` : ''}
+            </span>
+
+            <button
+              className="linkbtn"
+              type="button"
+              onClick={async () => {
+                await logout();
+                nav('/login');
+              }}
+              title="Sign Out"
+            >
+              <LogOut size={13} style={{ marginRight: 4, display: 'inline' }} />
+              {t('logout')}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {inMaster && (
+        <div className="subnav">
+          <div className="subnav-in">
+            <NavLink to="/parts">Parts</NavLink>
+            <NavLink to="/cartons">Cartons</NavLink>
+            <NavLink to="/pallets-containers">Pallets &amp; containers</NavLink>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

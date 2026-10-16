@@ -46,7 +46,7 @@ const DICT = {
 const I18n = createContext(null);
 
 function initialLang() {
-  try { return localStorage.getItem('ps_lang') || 'en'; } catch { return 'en'; }
+  return 'en'; // English only while the language buttons are hidden (see TopNav.jsx SHOW_LANGUAGES)
 }
 
 export function I18nProvider({ children }) {
